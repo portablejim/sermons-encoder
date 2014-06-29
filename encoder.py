@@ -233,6 +233,48 @@ class EncoderUi(Frame):
         else:
             self.root.createcommand("::tk::mac::ShowPreferences", self.openOptionsWindowOSX)
 
+    def generateOptions(self):
+        window = Toplevel(self)
+        window.columnconfigure(0, weight=1)
+        frame = Frame(window)
+        frame.columnconfigure(2, weight=1)
+
+        sermonsLabel(frame, "Low quality MP3 options", 0)
+        sermonsLabel(frame, "High quality MP3 options", 1)
+        sermonsLabel(frame, "Opus options", 2)
+
+        self.lqOptionsProgram = StringVar()
+        self.lqOptionsOptions = StringVar()
+        self.hqOptionsProgram = StringVar()
+        self.hqOptionsOptions = StringVar()
+        self.opusOptionsProgram = StringVar()
+        self.opusOptionsOptions = StringVar()
+
+        self.comboboxLqOptionsProgram = ttk.Combobox(frame, textvariable=self.lqOptionsProgram, width=8)
+        self.comboboxHqOptionsProgram = ttk.Combobox(frame, textvariable=self.hqOptionsProgram, width=8)
+        self.comboboxOpusOptionsProgram = ttk.Combobox(frame, textvariable=self.opusOptionsProgram, width=8)
+        self.entryLqOptionsOptions = ttk.Entry(frame, textvariable=self.lqOptionsOptions)
+        self.entryHqOptionsOptions = ttk.Entry(frame, textvariable=self.hqOptionsOptions)
+        self.entryOpusOptionsOptions = ttk.Entry(frame, textvariable=self.opusOptionsOptions)
+
+        programValues = ("ffmpeg", "lame", "oggenc", "opusenc")
+        self.comboboxLqOptionsProgram["values"] = programValues
+        self.comboboxHqOptionsProgram["values"] = programValues
+        self.comboboxOpusOptionsProgram["values"] = programValues
+        self.comboboxLqOptionsProgram.configure(state="readonly")
+        self.comboboxHqOptionsProgram.configure(state="readonly")
+        self.comboboxOpusOptionsProgram.configure(state="readonly")
+
+        frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N,E,S,W))
+        self.comboboxLqOptionsProgram.grid(column=1, row=0)
+        self.comboboxHqOptionsProgram.grid(column=1, row=1)
+        self.comboboxOpusOptionsProgram.grid(column=1, row=2)
+        self.entryLqOptionsOptions.grid(column=2, row=0, sticky=(E,W))
+        self.entryHqOptionsOptions.grid(column=2, row=1, sticky=(E,W))
+        self.entryOpusOptionsOptions.grid(column=2, row=2, sticky=(E,W))
+
+        
+
     def fillData(self):
         recentSeries = self.model.getRecentSeries()
         self.sermonSeriesRecentVar = recentSeries
@@ -249,9 +291,11 @@ class EncoderUi(Frame):
         self.sermonDirectory.set(directoryName)
 
     def openOptionsWindow(self):
+        self.generateOptions()
         pass
 
-    def openOptionsWindowOSX(event=None):
+    def openOptionsWindowOSX(self):
+        self.generateOptions()
         pass
 
     def exitApp(self):
@@ -370,6 +414,18 @@ class Controller:
     def seriesSelected(self, seriesName):
         seriesRecord = self.model.selectSeries(seriesName)
         self.view.setSeries(seriesRecord[2], seriesRecord[0], seriesRecord[3], seriesRecord[4])
+
+    def doEncode(self, launchArgs, updateValue):
+        splitArgs = shlex.split(launchArgs)
+        encodeData = threading.local()
+        encodeData.thread = subprocess.Popen(splitArgs, )
+
+    def reenableWhenFinished(self, t1, t2, t3):
+        t1.join()
+        t2.join()
+        t3.join()
+
+        enableFields()
 
 
 def main():
