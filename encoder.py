@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from datetime import date, datetime
+import json
+from macpath import split
 import sqlite3
 from tkinter import *
 from tkinter import ttk, filedialog
@@ -151,7 +153,8 @@ class EncoderUi(Frame):
 
         speaker_combo["values"] = ('Allan Blanch', 'Wayne Connor', 'David Ferres', 'Bryson Smith')
         service_combo["values"] = (
-        '(Common) - No suffix', 'a - Early Church', 'b - Morning Church', 'c - Evening church', 't - Tuesday Church')
+            '(Common) - No suffix', 'a - Early Church', 'b - Morning Church', 'c - Evening church',
+            't - Tuesday Church')
         self.valuesService = ('', 'a', 'b', 'c', 't')
         service_combo.bind("<<ComboboxSelected>>",
                            lambda e: service_combo.set(self.valuesService[service_combo.current()]))
@@ -318,6 +321,7 @@ class EncoderUi(Frame):
 class Data:
     def __init__(self):
         self.setupDatabase()
+        self.setupOptionsText()
         pass
 
     def setupDatabase(self):
@@ -332,6 +336,31 @@ class Data:
             directory TEXT NOT NULL
         )''')
         self.conn.commit()
+
+    def setupOptionsText(self):
+        self.optionsFilename = "encodeOpts.conf"
+        optsString = ""
+        try:
+            with open(self.optionsFilename) as f:
+                optsString = f.readlines()
+
+        except FileNotFoundError:
+            optsString = '{"lq": {"program": "lame", "options": ""},' \
+                ' "hq": {"program": "lame", "options": ""},' \
+                ' "opus": {"program": "opusenc", "options": ""},' \
+                ' "albumTitle": "DPC Bible Talks"}'
+
+        self.encodingOptions = json.loads(optsString)
+        json.dump(self.encodingOptions, self.optionsFilename, indent=4, sort_keys=True)
+
+    def getEncodingOptions(self, quality):
+        return self.encodingOptions[quality]
+
+    def setEncodingProgram(self, quality, program):
+        self.encodingOptions[quality]["program"] = program
+
+    def setEncodingOptions(self, quality, options):
+        self.encodingOptions[quality]["options"] = options
 
     def getSpeakers(self, searchTerm):
         #stub
@@ -370,6 +399,26 @@ class Controller:
     def seriesSelected(self, seriesName):
         seriesRecord = self.model.selectSeries(seriesName)
         self.view.setSeries(seriesRecord[2], seriesRecord[0], seriesRecord[3], seriesRecord[4])
+
+    def updateProgressBar(self):
+        pass
+
+    def encodeMp3(self, inputFile, outputFile, args, tags):
+        programName = "lame"
+        programArgs = "%s %s %s --tt %s --ta %s --tl %s --tc %s" % (
+            args,
+            inputFile,
+            outputFile,
+            tags["sermonName"],
+            tags["speaker"],
+            tags["albumTitle"],
+            tags["comment"]
+        )
+
+        splitArgs = programArgs.split(" ")
+        cmd = [programName] + splitArgs
+
+
 
 
 def main():
