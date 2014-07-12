@@ -6,6 +6,7 @@ import shlex
 import sqlite3
 import subprocess
 import threading
+from time import sleep
 from tkinter import *
 from tkinter import ttk, filedialog
 
@@ -250,6 +251,8 @@ class EncoderUi(Frame):
     def generateOptions(self):
         window = Toplevel(self)
         window.columnconfigure(0, weight=1)
+        window.transient(self.root)
+        window.title("Sermon Encoder Options")
         frame = Frame(window)
         frame.columnconfigure(2, weight=1)
 
@@ -270,6 +273,7 @@ class EncoderUi(Frame):
         self.entryLqOptionsOptions = ttk.Entry(frame, textvariable=self.lqOptionsOptions)
         self.entryHqOptionsOptions = ttk.Entry(frame, textvariable=self.hqOptionsOptions)
         self.entryOpusOptionsOptions = ttk.Entry(frame, textvariable=self.opusOptionsOptions)
+        self.buttonSaveOptions = ttk.Button(frame, text="Save", command=self.saveOptions)
 
         programValues = ("ffmpeg", "lame", "oggenc", "opusenc")
         self.comboboxLqOptionsProgram["values"] = programValues
@@ -278,6 +282,12 @@ class EncoderUi(Frame):
         self.comboboxLqOptionsProgram.configure(state="readonly")
         self.comboboxHqOptionsProgram.configure(state="readonly")
         self.comboboxOpusOptionsProgram.configure(state="readonly")
+        self.lqOptionsProgram.set(self.model.getEncodingOptions("lq")["program"])
+        self.hqOptionsProgram.set(self.model.getEncodingOptions("hq")["program"])
+        self.opusOptionsProgram.set(self.model.getEncodingOptions("opus")["program"])
+        self.lqOptionsOptions.set(self.model.getEncodingOptions("lq")["options"])
+        self.hqOptionsOptions.set(self.model.getEncodingOptions("hq")["options"])
+        self.opusOptionsOptions.set(self.model.getEncodingOptions("opus")["options"])
 
         frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N,E,S,W))
         self.comboboxLqOptionsProgram.grid(column=1, row=0)
@@ -286,7 +296,9 @@ class EncoderUi(Frame):
         self.entryLqOptionsOptions.grid(column=2, row=0, sticky=(E,W))
         self.entryHqOptionsOptions.grid(column=2, row=1, sticky=(E,W))
         self.entryOpusOptionsOptions.grid(column=2, row=2, sticky=(E,W))
+        self.buttonSaveOptions.grid(column=2, row=3, sticky=E, pady=3)
 
+        self.optionsWindow = window
         
 
     def fillData(self):
@@ -312,6 +324,13 @@ class EncoderUi(Frame):
         self.generateOptions()
         pass
 
+    def saveOptions(self):
+        self.optionSaveAction()
+        self.buttonSaveOptions.configure(state="disabled")
+        sleep(0.5)
+        self.optionsWindow.destroy()
+        pass
+
     def exitApp(self):
         self.root.quit()
 
@@ -320,6 +339,9 @@ class EncoderUi(Frame):
 
     def setSelectSeriesAction(self, action):
         self.actionSermonSelected = action
+
+    def setOptionSaveAction(self, action):
+        self.optionSaveAction = action
 
     def disableFields(self):
         self.fileChooserEntry.configure(state="disabled")
@@ -415,7 +437,9 @@ class Data:
                 ' "albumTitle": "DPC Bible Talks"}'
 
         self.encodingOptions = json.loads(optsString)
+        self.saveOptions()
 
+    def saveOptions(self):
         with open(self.optionsFilename, mode="w") as f:
             json.dump(self.encodingOptions, f, indent=4, sort_keys=True)
 
@@ -424,9 +448,11 @@ class Data:
 
     def setEncodingProgram(self, quality, program):
         self.encodingOptions[quality]["program"] = program
+        self.saveOptions()
 
     def setEncodingOptions(self, quality, options):
         self.encodingOptions[quality]["options"] = options
+        self.saveOptions()
 
     def getSpeakers(self, searchTerm):
         #stub
@@ -553,6 +579,16 @@ class Controller:
     def parseLame(self, text):
         pass
 
+    def saveOptions(self):
+        self.model.setEncodingProgram("lq", self.view.lqOptionsProgram.get())
+        self.model.setEncodingProgram("hq", self.view.hqOptionsProgram.get())
+        self.model.setEncodingProgram("opus", self.view.opusOptionsProgram.get())
+
+        self.model.setEncodingOptions("lq", self.view.lqOptionsOptions.get())
+        self.model.setEncodingOptions("hq", self.view.hqOptionsOptions.get())
+        self.model.setEncodingOptions("opus", self.view.opusOptionsOptions.get())
+        pass
+
 
 def main():
     data = Data()
@@ -560,6 +596,7 @@ def main():
     controller = Controller(gui, data)
     gui.setEncodeAction(controller.encode)
     gui.setSelectSeriesAction(controller.seriesSelected)
+    gui.setOptionSaveAction(controller.saveOptions)
 
     gui.root.mainloop()
 
