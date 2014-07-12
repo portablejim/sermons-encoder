@@ -2,10 +2,17 @@
 
 from datetime import date, datetime
 import json
-from macpath import split
+import shlex
 import sqlite3
+import subprocess
+import threading
 from tkinter import *
 from tkinter import ttk, filedialog
+
+class STATUS:
+    READY = 0
+    ENCODING_1=10
+    ENCODING_2=11
 
 
 class sermonsLabel(ttk.Label):
@@ -36,6 +43,10 @@ class EncoderUi(Frame):
         Frame.__init__(self, self.parent, padx=6, pady=14)
 
         self.speaker = list()
+
+        self.status = STATUS.READY
+        self.statusUpdate = False
+        self.root.after(100, self.monitor)
 
         self.initUI()
 
@@ -361,6 +372,15 @@ class EncoderUi(Frame):
         self.sermonService.set(service)
         self.sermonDirectory.set(directory)
 
+    def monitor(self):
+        if self.statusUpdate:
+            if self.status == STATUS.READY:
+                self.enableFields()
+            elif self.status == STATUS.ENCODING_1:
+                self.disableFields()
+            self.statusUpdate = False
+        self.root.after(100, self.monitor)
+
 
 class Data:
     def __init__(self):
@@ -386,7 +406,7 @@ class Data:
         optsString = ""
         try:
             with open(self.optionsFilename) as f:
-                optsString = f.readlines()
+                optsString = " ".join(f.readlines())
 
         except FileNotFoundError:
             optsString = '{"lq": {"program": "lame", "options": ""},' \
@@ -395,7 +415,9 @@ class Data:
                 ' "albumTitle": "DPC Bible Talks"}'
 
         self.encodingOptions = json.loads(optsString)
-        json.dump(self.encodingOptions, self.optionsFilename, indent=4, sort_keys=True)
+
+        with open(self.optionsFilename, mode="w") as f:
+            json.dump(self.encodingOptions, f, indent=4, sort_keys=True)
 
     def getEncodingOptions(self, quality):
         return self.encodingOptions[quality]
@@ -435,33 +457,87 @@ class Controller:
         self.model = model
 
     def encode(self):
-        self.view.disableFields()
+        #self.view.after(self.monitor())
+
+        self.view.status = STATUS.ENCODING_1
+        self.view.statusUpdate = True
+
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
                                 self.view.sermonService.get(), self.view.sermonDirectory.get())
-        self.view.enableFields()
+        threading.Thread(target=self.encodeAllFiles).start()
+
 
     def seriesSelected(self, seriesName):
         seriesRecord = self.model.selectSeries(seriesName)
         self.view.setSeries(seriesRecord[2], seriesRecord[0], seriesRecord[3], seriesRecord[4])
 
-    def doEncode(self, launchArgs, updateValue):
+    def encodeAllFiles(self):
+        lameProgress = 0
+        baseName = "../02_Roast-Mutton."
+        rawWav = self.fileToRam(baseName + "flac")
+
+        self.view.status = STATUS.ENCODING_2
+        self.view.statusUpdate = True
+
+        thread1 = threading.Thread(target=self.encodeLame, args=("-", baseName + "hq.mp3", "", {"sermonName": "A", "speaker": "A", "albumTitle": "A", "comment": "A"}, rawWav, lameProgress, self.parseLame))
+        thread2 = threading.Thread(target=self.encodeLame, args=("-", baseName + "lq.mp3", "", {"sermonName": "A", "speaker": "A", "albumTitle": "A", "comment": "A"}, rawWav, lameProgress, self.parseLame))
+
+        thread1.start()
+        thread2.start()
+
+        thread1.join()
+        thread2.join()
+
+        self.view.status = STATUS.READY
+        self.view.statusUpdate = True
+
+        print("Both done")
+
+    def doEncode(self, launchArgs, fileInput, updateValue, outputParser):
         splitArgs = shlex.split(launchArgs)
         encodeData = threading.local()
-        encodeData.thread = subprocess.Popen(splitArgs, )
+        print(" ".join(splitArgs))
+        #encodeData.thread = subprocess.Popen(splitArgs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        encodeData.thread = subprocess.Popen(splitArgs, stdin=subprocess.PIPE)
+        encodeData.thread.stdin.write(fileInput)
+        encodeData.thread.stdin.close()
+
+        updateValue = 0
 
     def reenableWhenFinished(self, t1, t2, t3):
         t1.join()
         t2.join()
         t3.join()
 
-        enableFields()
+        self.view.enableFields()
 
     def updateProgressBar(self):
         pass
 
-    def encodeMp3(self, inputFile, outputFile, args, tags):
-        programName = "lame"
-        programArgs = "%s %s %s --tt %s --ta %s --tl %s --tc %s" % (
+    def fileToRam(self, inputFile):
+        cmd = ["ffmpeg", "-y", "-i", inputFile, "-f", "wav", "-"]
+
+            #rawWav = tempfile      .SpooledTemporaryFile(mode='wb', max_size=600*1024*1024)
+        rawWav = bytearray()
+
+        print("CMD: " + " ".join(cmd))
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        while True:
+            data = p.stdout.read(2048)
+            if len(data) == 0:
+                break
+
+            rawWav += data
+
+        return rawWav
+
+    def processLine(self, line):
+        print("Line: " + line)
+
+
+    def encodeLame(self, inputFile, outputFile, args, tags, fileInput, updateValue, outputParser):
+        cmd = "lame --nohist --verbose %s %s %s --tt %s --ta %s --tl %s --tc %s" % (
             args,
             inputFile,
             outputFile,
@@ -471,8 +547,11 @@ class Controller:
             tags["comment"]
         )
 
-        splitArgs = programArgs.split(" ")
-        cmd = [programName] + splitArgs
+        self.doEncode(cmd, fileInput, updateValue, outputParser)
+        print("Lame Done")
+
+    def parseLame(self, text):
+        pass
 
 
 def main():
