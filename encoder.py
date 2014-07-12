@@ -3,6 +3,7 @@
 from datetime import date, datetime
 import json
 import os
+import shlex
 import sqlite3
 import subprocess
 import threading
@@ -285,7 +286,9 @@ class EncoderUi(Frame):
         self.entryOpusOptionsOptions = ttk.Entry(frame, textvariable=self.opusOptionsOptions)
         self.buttonSaveOptions = ttk.Button(frame, text="Save", command=self.saveOptions)
 
-        programValues = ("ffmpeg", "lame", "oggenc", "opusenc")
+        # TODO: When I code ffmpeg and opusenc
+        # programValues = ("ffmpeg", "lame", "oggenc", "opusenc")
+        programValues = ("lame", "opusenc")
         self.comboboxLqOptionsProgram["values"] = programValues
         self.comboboxHqOptionsProgram["values"] = programValues
         self.comboboxOpusOptionsProgram["values"] = programValues
@@ -438,7 +441,8 @@ class Data:
     def __init__(self):
         self.setupDatabase()
         self.setupOptionsText()
-        pass
+
+        self.encodingResult = {"hq": -1, "lq": -1, "opus": -1}
 
     def setupDatabase(self):
         self.conn = sqlite3.connect("history.db", detect_types=sqlite3.PARSE_DECLTYPES)
@@ -528,16 +532,14 @@ class Controller:
     def encode(self):
         #self.view.after(self.monitor())
 
-        self.view.status = STATUS.ENCODING_1
-        self.view.statusUpdate = True
-
         targetPath = os.path.join(self.view.sermonDirectory.get(), "dial")
         if not os.path.exists(targetPath):
             os.mkdir(targetPath)
 
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
                                 self.view.sermonService.get(), self.view.sermonDirectory.get())
-        threading.Thread(target=self.encodeAllFiles).start()
+        if os.path.exists(self.view.targetFilename.get()):
+            threading.Thread(target=self.encodeAllFiles).start()
 
 
     def seriesSelected(self, seriesName):
@@ -547,8 +549,11 @@ class Controller:
     def encodeAllFiles(self):
         lameProgress = 0
 
+        self.view.status = STATUS.ENCODING_1
+        self.view.statusUpdate = True
+
         baseName = "../02_Roast-Mutton."
-        rawWav = self.fileToRam(baseName + "flac")
+        rawWav = self.fileToRam(self.view.targetFilename.get())
 
         self.view.status = STATUS.ENCODING_2
         self.view.statusUpdate = True
@@ -561,34 +566,44 @@ class Controller:
         comment = "%s %s %s" % (self.view.sermonPassage.get(), targetDate, self.view.sermonSeries.get())
         metadata = {"sermonName": self.view.sermonTitle.get(), "speaker": self.view.sermonSpeaker.get(), "albumTitle": self.view.sermonSeries.get(), "comment": comment}
 
+        commandLookup = {"lame": self.encodeLame, "opusenc": self.encodeOpus}
 
-        thread1 = threading.Thread(target=self.encodeLame, args=("-",
-                                                                 os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % (filename)),
-                                                                 self.model.getEncodingOptions("lq")["options"],
-                                                                 metadata,
-                                                                 rawWav,
-                                                                 lameProgress,
-                                                                 self.parseLame))
-        thread2 = threading.Thread(target=self.encodeLame, args=("-",
-                                                                 os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % (filename)),
-                                                                 self.model.getEncodingOptions("hq")["options"],
-                                                                 metadata,
-                                                                 rawWav,
-                                                                 lameProgress,
-                                                                 self.parseLame))
+        thread1 = threading.Thread(target=self.model.getEncodingOptions("lq")["program"],
+                                   args=("-",
+                                         os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % (filename)),
+                                         self.model.getEncodingOptions("lq")["options"],
+                                         metadata,
+                                         rawWav,
+                                         self.model.encodingResult["lq"]))
+        thread2 = threading.Thread(target=self.model.getEncodingOptions("lq")["program"],
+                                   args=("-",
+                                         os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % (filename)),
+                                         self.model.getEncodingOptions("hq")["options"],
+                                         metadata,
+                                         rawWav,
+                                         self.model.encodingResult["hq"]))
+        thread3 = threading.Thread(target=self.model.getEncodingOptions("opus")["program"],
+                                   args=("-",
+                                         os.path.join(self.view.sermonDirectory.get(), "%s.opus" % (filename)),
+                                         self.model.getEncodingOptions("opus")["options"],
+                                         metadata,
+                                         rawWav,
+                                         self.model.encodingResult["opus"]))
 
         thread1.start()
         thread2.start()
+        thread3.start()
 
         thread1.join()
         thread2.join()
+        thread3.join()
 
         self.view.status = STATUS.READY
         self.view.statusUpdate = True
 
-        print("Both done")
+        print("All done")
 
-    def doEncode(self, launchArgs, fileInput, updateValue, outputParser):
+    def doEncode(self, launchArgs, fileInput, updateValue):
         splitArgs = launchArgs
         encodeData = threading.local()
         print(" ".join(splitArgs))
@@ -597,7 +612,9 @@ class Controller:
         encodeData.thread.stdin.write(fileInput)
         encodeData.thread.stdin.close()
 
-        updateValue = 0
+        encodeData.thread.wait()
+        updateValue = encodeData.thread.poll()
+
 
     def reenableWhenFinished(self, t1, t2, t3):
         t1.join()
@@ -631,16 +648,8 @@ class Controller:
         print("Line: " + line)
 
 
-    def encodeLame(self, inputFile, outputFile, args, tags, fileInput, updateValue, outputParser):
-        cmd = "lame --nohist --verbose %s %s %s --tt %s --ta %s --tl %s --tc %s" % (
-            args,
-            inputFile,
-            outputFile,
-            tags["sermonName"],
-            tags["speaker"],
-            tags["albumTitle"],
-            tags["comment"]
-        )
+    def encodeLame(self, inputFile, outputFile, args, tags, fileInput, updateValue):
+        splitArgs = shlex.split(args)
         cmd = [
             "lame",
             inputFile,
@@ -654,9 +663,29 @@ class Controller:
             "--tc",
             tags["comment"]
         ]
+        cmd = cmd[:3] + splitArgs + cmd[3:]
 
-        self.doEncode(cmd, fileInput, updateValue, outputParser)
+        self.doEncode(cmd, fileInput, updateValue)
         print("Lame Done")
+
+    def encodeOpus(self, inputFile, outputFile, args, tags, fileInput, updateValue):
+        splitArgs = shlex.split(args)
+        cmd = [
+            "opusenc",
+            "--quiet",
+            inputFile,
+            outputFile,
+            "--artist",
+            tags["speaker"],
+            "--title",
+            tags["sermonName"],
+            "--album",
+            tags["albumTitle"]
+        ]
+        cmd = cmd[:1] + splitArgs + cmd[1:]
+
+        self.doEncode(cmd, fileInput, updateValue)
+        print("Opus done")
 
     def parseLame(self, text):
         pass
@@ -669,7 +698,6 @@ class Controller:
         self.model.setEncodingOptions("lq", self.view.lqOptionsOptions.get())
         self.model.setEncodingOptions("hq", self.view.hqOptionsOptions.get())
         self.model.setEncodingOptions("opus", self.view.opusOptionsOptions.get())
-        pass
 
 
 def main():
