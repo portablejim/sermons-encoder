@@ -2,7 +2,7 @@
 
 from datetime import date, datetime
 import json
-import shlex
+import os
 import sqlite3
 import subprocess
 import threading
@@ -412,6 +412,9 @@ class EncoderUi(Frame):
         self.sermonService.set(service)
         self.sermonDirectory.set(directory)
 
+    def setDirectory(self, path):
+        self.sermonDirectory.set(path)
+
     def monitor(self):
         if self.statusUpdate:
             if self.status == STATUS.READY:
@@ -487,9 +490,15 @@ class Data:
 
     def getRecentSeries(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT seriesName FROM series")
+        cur.execute("SELECT seriesName FROM series ORDER BY used LIMIT 10")
         rows = cur.fetchall()
         return tuple([row[0] for row in rows])
+
+    def getLatestDirectory(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT directory FROM series ORDER BY used LIMIT 1")
+        rows = cur.fetchall()
+        return rows[0][0]
 
     def insertSeries(self, name, speaker, service, directory):
         cur = self.conn.cursor()
@@ -509,11 +518,22 @@ class Controller:
         self.view = view
         self.model = model
 
+    def prefillForm(self):
+        dirName = self.model.getLatestDirectory().strip()
+        if dirName == "" or not os.path.exists(dirName):
+            dirName = os.path.expanduser("~")
+
+        self.view.setDirectory(dirName)
+
     def encode(self):
         #self.view.after(self.monitor())
 
         self.view.status = STATUS.ENCODING_1
         self.view.statusUpdate = True
+
+        targetPath = os.path.join(self.view.sermonDirectory.get(), "dial")
+        if not os.path.exists(targetPath):
+            os.mkdir(targetPath)
 
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
                                 self.view.sermonService.get(), self.view.sermonDirectory.get())
@@ -526,14 +546,36 @@ class Controller:
 
     def encodeAllFiles(self):
         lameProgress = 0
+
         baseName = "../02_Roast-Mutton."
         rawWav = self.fileToRam(baseName + "flac")
 
         self.view.status = STATUS.ENCODING_2
         self.view.statusUpdate = True
 
-        thread1 = threading.Thread(target=self.encodeLame, args=("-", baseName + "hq.mp3", "", {"sermonName": "A", "speaker": "A", "albumTitle": "A", "comment": "A"}, rawWav, lameProgress, self.parseLame))
-        thread2 = threading.Thread(target=self.encodeLame, args=("-", baseName + "lq.mp3", "", {"sermonName": "A", "speaker": "A", "albumTitle": "A", "comment": "A"}, rawWav, lameProgress, self.parseLame))
+        targetDate = "%s%s%s" % (self.view.sermonDateYear.get(), self.view.sermonDateMonth.get(), self.view.sermonDateDay.get())
+        suffix = ""
+        if self.view.sermonService.get().strip() != "":
+            suffix = "-" + self.view.sermonService.get()
+        filename = "%s%s" % (targetDate, suffix)
+        comment = "%s %s %s" % (self.view.sermonPassage.get(), targetDate, self.view.sermonSeries.get())
+        metadata = {"sermonName": self.view.sermonTitle.get(), "speaker": self.view.sermonSpeaker.get(), "albumTitle": self.view.sermonSeries.get(), "comment": comment}
+
+
+        thread1 = threading.Thread(target=self.encodeLame, args=("-",
+                                                                 os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % (filename)),
+                                                                 self.model.getEncodingOptions("lq")["options"],
+                                                                 metadata,
+                                                                 rawWav,
+                                                                 lameProgress,
+                                                                 self.parseLame))
+        thread2 = threading.Thread(target=self.encodeLame, args=("-",
+                                                                 os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % (filename)),
+                                                                 self.model.getEncodingOptions("hq")["options"],
+                                                                 metadata,
+                                                                 rawWav,
+                                                                 lameProgress,
+                                                                 self.parseLame))
 
         thread1.start()
         thread2.start()
@@ -547,7 +589,7 @@ class Controller:
         print("Both done")
 
     def doEncode(self, launchArgs, fileInput, updateValue, outputParser):
-        splitArgs = shlex.split(launchArgs)
+        splitArgs = launchArgs
         encodeData = threading.local()
         print(" ".join(splitArgs))
         #encodeData.thread = subprocess.Popen(splitArgs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -599,6 +641,19 @@ class Controller:
             tags["albumTitle"],
             tags["comment"]
         )
+        cmd = [
+            "lame",
+            inputFile,
+            outputFile,
+            "--tt",
+            tags["sermonName"],
+            "--ta",
+            tags["speaker"],
+            "--tl",
+            tags["albumTitle"],
+            "--tc",
+            tags["comment"]
+        ]
 
         self.doEncode(cmd, fileInput, updateValue, outputParser)
         print("Lame Done")
@@ -624,6 +679,7 @@ def main():
     gui.setEncodeAction(controller.encode)
     gui.setSelectSeriesAction(controller.seriesSelected)
     gui.setOptionSaveAction(controller.saveOptions)
+    controller.prefillForm()
 
     gui.root.mainloop()
 
