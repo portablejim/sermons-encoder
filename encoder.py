@@ -494,10 +494,13 @@ class Data:
         return tuple([row[0] for row in rows])
 
     def getLatestDirectory(self):
-        cur = self.conn.cursor()
-        cur.execute("SELECT directory FROM series ORDER BY used LIMIT 1")
-        rows = cur.fetchall()
-        return rows[0][0]
+        try:
+            cur = self.conn.cursor()
+            cur.execute("SELECT directory FROM series ORDER BY used LIMIT 1")
+            rows = cur.fetchall()
+            return rows[0][0]
+        except:
+            return ""
 
     def insertSeries(self, name, speaker, service, directory):
         cur = self.conn.cursor()
