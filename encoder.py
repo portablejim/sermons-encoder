@@ -9,7 +9,8 @@ import subprocess
 import threading
 from time import sleep
 from tkinter import *
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
+
 
 class STATUS:
     READY = 0
@@ -322,12 +323,15 @@ class EncoderUi(Frame):
 
     def chooseFile(self):
         filename = filedialog.askopenfilename(
-            filetypes=(("Lossless audio", "*.flac *.wav *.aiff;"), ("Lossy audio", "*.opus *.ogg *.mp3")))
+            filetypes=(("Lossless audio", "*.flac *.wav *.aiff;"), ("Lossy audio", "*.opus *.ogg *.mp3")),
+            initialdir=os.path.expanduser("~"),
+            parent=self)
         self.targetFilename.set(filename)
 
     def chooseDirectory(self):
-        directoryName = filedialog.askdirectory()
-        self.sermonDirectory.set(directoryName)
+        directoryName = filedialog.askdirectory(parent=self, initialdir=self.sermonDirectory.get())
+        if directoryName != "":
+            self.sermonDirectory.set(directoryName)
 
     def openOptionsWindow(self):
         self.generateOptions()
@@ -536,6 +540,30 @@ class Controller:
         if not os.path.exists(targetPath):
             os.mkdir(targetPath)
 
+        inputFile = self.view.targetFilename.get().strip()
+        title = self.view.sermonTitle.get().strip()
+        speaker = self.view.sermonSpeaker.get().strip()
+        series = self.view.sermonSeries.get().strip()
+        suffix = self.view.sermonSeries.get().strip()
+        directory = self.view.sermonDirectory.get().strip()
+
+        if inputFile == "" or not os.path.exists(inputFile) or os.path.isdir(inputFile):
+            messagebox.showerror("Invalid input audio file",
+                                 "The input audio file path is missing or invalid."
+                                  + "Please input a valid file path.")
+            return
+
+        if title == "" or speaker == "" or series == "" or directory == "":
+            messagebox.showerror("Incomplete Info",
+                                 "Please fill out the title, speaker, series and directory before encoding.")
+            return
+
+        if not os.path.exists(directory) or not os.path.isdir(directory):
+            messagebox.showerror("Invalid output directory",
+                                 "Please specify a valid directory to output the audio files to."
+                                  + "You will need write access to the directory for encoding to succeed.")
+            return
+
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
                                 self.view.sermonService.get(), self.view.sermonDirectory.get())
         if os.path.exists(self.view.targetFilename.get()):
@@ -568,27 +596,27 @@ class Controller:
 
         commandLookup = {"lame": self.encodeLame, "opusenc": self.encodeOpus}
 
-        thread1 = threading.Thread(target=self.model.getEncodingOptions("lq")["program"],
+        thread1 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                    args=("-",
                                          os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % (filename)),
                                          self.model.getEncodingOptions("lq")["options"],
                                          metadata,
                                          rawWav,
-                                         self.model.encodingResult["lq"]))
-        thread2 = threading.Thread(target=self.model.getEncodingOptions("lq")["program"],
+                                         "lq"))
+        thread2 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                    args=("-",
                                          os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % (filename)),
                                          self.model.getEncodingOptions("hq")["options"],
                                          metadata,
                                          rawWav,
-                                         self.model.encodingResult["hq"]))
-        thread3 = threading.Thread(target=self.model.getEncodingOptions("opus")["program"],
+                                         "hq"))
+        thread3 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("opus")["program"]],
                                    args=("-",
                                          os.path.join(self.view.sermonDirectory.get(), "%s.opus" % (filename)),
                                          self.model.getEncodingOptions("opus")["options"],
                                          metadata,
                                          rawWav,
-                                         self.model.encodingResult["opus"]))
+                                         "opus"))
 
         thread1.start()
         thread2.start()
@@ -597,6 +625,12 @@ class Controller:
         thread1.join()
         thread2.join()
         thread3.join()
+
+        if self.model.encodingResult["lq"] != 0 \
+                or self.model.encodingResult["hq"] != 0 \
+                or self.model.encodingResult["opus"] != 0:
+            messagebox.showerror("Error encoding files",
+                                 "One or more files failed to encode properly.")
 
         self.view.status = STATUS.READY
         self.view.statusUpdate = True
@@ -613,7 +647,7 @@ class Controller:
         encodeData.thread.stdin.close()
 
         encodeData.thread.wait()
-        updateValue = encodeData.thread.poll()
+        self.model.encodingResult[updateValue] = encodeData.thread.returncode
 
 
     def reenableWhenFinished(self, t1, t2, t3):
