@@ -28,13 +28,14 @@ class EncoderUi(Frame):
         self.root = Tk()
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
-        self.root.minsize(500, 450)
+        self.root.minsize(500, 490)
 
         self.root.title("Sermon Encoder")
 
         self.parent = Frame(self.root)
         self.parent.grid(column=0, row=0, sticky=(N, S, E, W))
-        self.parent.columnconfigure(0, weight=0)
+        self.parent.columnconfigure(0, weight=1)
+        self.parent.rowconfigure(0, weight=1)
 
         self.model = model
         self.controller = None
@@ -55,6 +56,7 @@ class EncoderUi(Frame):
         self.grid(column=0, row=0, sticky=(N, S, E, W))
         self.columnconfigure(0, weight=0)
         self.columnconfigure(1, weight=1)
+        self.rowconfigure(6, weight=1)
 
         self.generateFilechooser()
 
@@ -212,6 +214,8 @@ class EncoderUi(Frame):
         encode3Checkbox = ttk.Checkbutton(encodingOptionsContainer, text="Opus", variable=self.encode3, onvalue=True)
         #encodeOutputEntry = ttk.Entry(self, textvariable=self.outputSuffix)
         encodeButton = ttk.Button(self, text="Encode")
+        progressText = ttk.Label(self, anchor="center", padding="0 0 0 5")
+        progressBar = ttk.Progressbar(self, mode="indeterminate")
 
         encodingOptionsLabel.grid(column=0, row=11, sticky=(W))
         encode1Checkbox.grid(column=0, row=0, sticky=(E, W), padx=8)
@@ -221,12 +225,18 @@ class EncoderUi(Frame):
         #encodeOutputLabel.grid(column=0, row=12, sticky=(W))
         #encodeOutputEntry.grid(column=1, row=12, sticky=(E,W))
         encodeButton.grid(column=1, row=13, sticky=(E, W), padx=10, pady=15)
+        progressText.grid(column=1, row=15, sticky=(E, W))
+        progressBar.grid(column=1, row=16, sticky=(E, W))
 
         self.encode1Checkbox = encode1Checkbox
         self.encode2Checkbox = encode2Checkbox
         self.encode3Checkbox = encode3Checkbox
         #self.suffixEntry = encodeOutputEntry
         self.encodeButton = encodeButton
+        self.encodeProgressText = progressText
+        self.encodeProgressBar = progressBar
+
+        self.hideProgress()
 
         self.encode1.set(True)
         self.encode2.set(True)
@@ -383,6 +393,14 @@ class EncoderUi(Frame):
         #self.suffixEntry.configure(state="normal")
         self.encodeButton.configure(state="normal")
 
+    def hideProgress(self):
+        self.encodeProgressText.grid_remove()
+        self.encodeProgressBar.grid_remove()
+
+    def showProgress(self):
+        self.encodeProgressText.grid()
+        self.encodeProgressBar.grid()
+
     def selectedSeries(self, arg):
         selectedId = int(self.seriesList.curselection()[0])
         selectedName = self.sermonSeriesRecentVar[selectedId]
@@ -398,8 +416,17 @@ class EncoderUi(Frame):
         if self.statusUpdate:
             if self.status == STATUS.READY:
                 self.enableFields()
+                self.encodeProgressBar.stop()
+                self.hideProgress()
             elif self.status == STATUS.ENCODING_1:
                 self.disableFields()
+                self.encodeProgressText.configure(text="Decoding input file")
+                self.encodeProgressBar.start(1)
+                self.showProgress()
+            elif self.status == STATUS.ENCODING_2:
+                self.encodeProgressText.configure(text="Encoding output files")
+                self.encodeProgressBar.stop()
+                self.encodeProgressBar.start(50)
             self.statusUpdate = False
         self.root.after(100, self.monitor)
 
