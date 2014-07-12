@@ -14,15 +14,15 @@ from tkinter import ttk, filedialog, messagebox
 
 class STATUS:
     READY = 0
-    ENCODING_1=10
-    ENCODING_2=11
+    ENCODING_1 = 10
+    ENCODING_2 = 11
 
 
 class sermonsLabel(ttk.Label):
     def __init__(self, parent, text, row):
         self.parent = parent
         ttk.Label.__init__(self, parent, text=text)
-        self.grid(column=0, row=row, sticky=(W), padx=4)
+        self.grid(column=0, row=row, sticky=W, padx=4)
 
 
 class EncoderUi(Frame):
@@ -88,7 +88,7 @@ class EncoderUi(Frame):
 
         self.fileChooserFrame.configure(padx=2)
 
-        self.fileChooserText.grid(column=0, row=0, sticky=(W))
+        self.fileChooserText.grid(column=0, row=0, sticky=W)
         self.fileChooserFrame.grid(column=1, row=0, sticky=(E, W))
         self.fileChooserEntry.grid(column=0, row=0, sticky=(E, W), padx=4)
         self.fileChooserButton.grid(column=1, row=0, sticky=(E, W))
@@ -208,24 +208,20 @@ class EncoderUi(Frame):
         encodingOptionsContainer.columnconfigure(2, weight=1, minsize=80)
 
         encodingOptionsLabel = ttk.Label(self, text="Enable")
-        #encodeOutputLabel = ttk.Label(self, text="Suffix")
         encode1Checkbox = ttk.Checkbutton(encodingOptionsContainer, text="Dialup MP3", variable=self.encode1,
                                           onvalue=True)
         encode2Checkbox = ttk.Checkbutton(encodingOptionsContainer, text="High Quality MP3", variable=self.encode2,
                                           onvalue=True)
         encode3Checkbox = ttk.Checkbutton(encodingOptionsContainer, text="Opus", variable=self.encode3, onvalue=True)
-        #encodeOutputEntry = ttk.Entry(self, textvariable=self.outputSuffix)
         encodeButton = ttk.Button(self, text="Encode")
         progressText = ttk.Label(self, anchor="center", padding="0 0 0 5")
         progressBar = ttk.Progressbar(self, mode="indeterminate")
 
-        encodingOptionsLabel.grid(column=0, row=11, sticky=(W))
+        encodingOptionsLabel.grid(column=0, row=11, sticky=W)
         encode1Checkbox.grid(column=0, row=0, sticky=(E, W), padx=8)
         encode2Checkbox.grid(column=1, row=0, sticky=(E, W), padx=8)
         encode3Checkbox.grid(column=2, row=0, sticky=(E, W), padx=8)
         encodingOptionsContainer.grid(column=1, row=11, pady=5)
-        #encodeOutputLabel.grid(column=0, row=12, sticky=(W))
-        #encodeOutputEntry.grid(column=1, row=12, sticky=(E,W))
         encodeButton.grid(column=1, row=13, sticky=(E, W), padx=10, pady=15)
         progressText.grid(column=1, row=15, sticky=(E, W))
         progressBar.grid(column=1, row=16, sticky=(E, W))
@@ -303,17 +299,16 @@ class EncoderUi(Frame):
         self.hqOptionsOptions.set(self.model.getEncodingOptions("hq")["options"])
         self.opusOptionsOptions.set(self.model.getEncodingOptions("opus")["options"])
 
-        frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N,E,S,W))
+        frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N, E, S, W))
         self.comboboxLqOptionsProgram.grid(column=1, row=0)
         self.comboboxHqOptionsProgram.grid(column=1, row=1)
         self.comboboxOpusOptionsProgram.grid(column=1, row=2)
-        self.entryLqOptionsOptions.grid(column=2, row=0, sticky=(E,W))
-        self.entryHqOptionsOptions.grid(column=2, row=1, sticky=(E,W))
-        self.entryOpusOptionsOptions.grid(column=2, row=2, sticky=(E,W))
+        self.entryLqOptionsOptions.grid(column=2, row=0, sticky=(E, W))
+        self.entryHqOptionsOptions.grid(column=2, row=1, sticky=(E, W))
+        self.entryOpusOptionsOptions.grid(column=2, row=2, sticky=(E, W))
         self.buttonSaveOptions.grid(column=2, row=3, sticky=E, pady=3)
 
         self.optionsWindow = window
-        
 
     def fillData(self):
         recentSeries = self.model.getRecentSeries()
@@ -408,7 +403,8 @@ class EncoderUi(Frame):
         self.encodeProgressText.grid()
         self.encodeProgressBar.grid()
 
-    def selectedSeries(self, arg):
+    # noinspection PyUnusedLocal
+    def selectedSeries(self, unused):
         selectedId = int(self.seriesList.curselection()[0])
         selectedName = self.sermonSeriesRecentVar[selectedId]
         self.actionSermonSelected(selectedName)
@@ -463,16 +459,15 @@ class Data:
 
     def setupOptionsText(self):
         self.optionsFilename = "encodeOpts.conf"
-        optsString = ""
         try:
             with open(self.optionsFilename) as f:
                 optsString = " ".join(f.readlines())
 
         except FileNotFoundError:
             optsString = '{"lq": {"program": "lame", "options": ""},' \
-                ' "hq": {"program": "lame", "options": ""},' \
-                ' "opus": {"program": "opusenc", "options": ""},' \
-                ' "albumTitle": "DPC Bible Talks"}'
+                         ' "hq": {"program": "lame", "options": ""},' \
+                         ' "opus": {"program": "opusenc", "options": ""},' \
+                         ' "albumTitle": "DPC Bible Talks"}'
 
         self.encodingOptions = json.loads(optsString)
         self.saveOptions()
@@ -491,10 +486,6 @@ class Data:
     def setEncodingOptions(self, quality, options):
         self.encodingOptions[quality]["options"] = options
         self.saveOptions()
-
-    def getSpeakers(self, searchTerm):
-        #stub
-        return ("Alice", "Bob", "Carol")
 
     def getRecentSeries(self):
         cur = self.conn.cursor()
@@ -544,13 +535,12 @@ class Controller:
         title = self.view.sermonTitle.get().strip()
         speaker = self.view.sermonSpeaker.get().strip()
         series = self.view.sermonSeries.get().strip()
-        suffix = self.view.sermonSeries.get().strip()
         directory = self.view.sermonDirectory.get().strip()
 
         if inputFile == "" or not os.path.exists(inputFile) or os.path.isdir(inputFile):
             messagebox.showerror("Invalid input audio file",
                                  "The input audio file path is missing or invalid."
-                                  + "Please input a valid file path.")
+                                 + "Please input a valid file path.")
             return
 
         if title == "" or speaker == "" or series == "" or directory == "":
@@ -561,7 +551,7 @@ class Controller:
         if not os.path.exists(directory) or not os.path.isdir(directory):
             messagebox.showerror("Invalid output directory",
                                  "Please specify a valid directory to output the audio files to."
-                                  + "You will need write access to the directory for encoding to succeed.")
+                                 + "You will need write access to the directory for encoding to succeed.")
             return
 
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
@@ -569,50 +559,48 @@ class Controller:
         if os.path.exists(self.view.targetFilename.get()):
             threading.Thread(target=self.encodeAllFiles).start()
 
-
     def seriesSelected(self, seriesName):
         seriesRecord = self.model.selectSeries(seriesName)
         self.view.setSeries(seriesRecord[2], seriesRecord[0], seriesRecord[3], seriesRecord[4])
 
     def encodeAllFiles(self):
-        lameProgress = 0
-
         self.view.status = STATUS.ENCODING_1
         self.view.statusUpdate = True
 
-        baseName = "../02_Roast-Mutton."
         rawWav = self.fileToRam(self.view.targetFilename.get())
 
         self.view.status = STATUS.ENCODING_2
         self.view.statusUpdate = True
 
-        targetDate = "%s%s%s" % (self.view.sermonDateYear.get(), self.view.sermonDateMonth.get(), self.view.sermonDateDay.get())
+        targetDate = "%s%s%s" % (
+            self.view.sermonDateYear.get(), self.view.sermonDateMonth.get(), self.view.sermonDateDay.get())
         suffix = ""
         if self.view.sermonService.get().strip() != "":
             suffix = "-" + self.view.sermonService.get()
         filename = "%s%s" % (targetDate, suffix)
         comment = "%s %s %s" % (self.view.sermonPassage.get(), targetDate, self.view.sermonSeries.get())
-        metadata = {"sermonName": self.view.sermonTitle.get(), "speaker": self.view.sermonSpeaker.get(), "albumTitle": self.view.sermonSeries.get(), "comment": comment}
+        metadata = {"sermonName": self.view.sermonTitle.get(), "speaker": self.view.sermonSpeaker.get(),
+                    "albumTitle": self.view.sermonSeries.get(), "comment": comment}
 
         commandLookup = {"lame": self.encodeLame, "opusenc": self.encodeOpus}
 
         thread1 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                    args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % (filename)),
+                                         os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % filename),
                                          self.model.getEncodingOptions("lq")["options"],
                                          metadata,
                                          rawWav,
                                          "lq"))
         thread2 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                    args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % (filename)),
+                                         os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % filename),
                                          self.model.getEncodingOptions("hq")["options"],
                                          metadata,
                                          rawWav,
                                          "hq"))
         thread3 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("opus")["program"]],
                                    args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "%s.opus" % (filename)),
+                                         os.path.join(self.view.sermonDirectory.get(), "%s.opus" % filename),
                                          self.model.getEncodingOptions("opus")["options"],
                                          metadata,
                                          rawWav,
@@ -626,9 +614,10 @@ class Controller:
         thread2.join()
         thread3.join()
 
-        if self.model.encodingResult["lq"] != 0 \
-                or self.model.encodingResult["hq"] != 0 \
-                or self.model.encodingResult["opus"] != 0:
+        resultLq = self.model.encodingResult["lq"]
+        resultHq = self.model.encodingResult["hq"]
+        resultOpus = self.model.encodingResult["opus"]
+        if resultLq != 0 or resultHq != 0 or resultOpus != 0:
             messagebox.showerror("Error encoding files",
                                  "One or more files failed to encode properly.")
 
@@ -641,14 +630,12 @@ class Controller:
         splitArgs = launchArgs
         encodeData = threading.local()
         print(" ".join(splitArgs))
-        #encodeData.thread = subprocess.Popen(splitArgs, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         encodeData.thread = subprocess.Popen(splitArgs, stdin=subprocess.PIPE)
         encodeData.thread.stdin.write(fileInput)
         encodeData.thread.stdin.close()
 
         encodeData.thread.wait()
         self.model.encodingResult[updateValue] = encodeData.thread.returncode
-
 
     def reenableWhenFinished(self, t1, t2, t3):
         t1.join()
@@ -657,13 +644,9 @@ class Controller:
 
         self.view.enableFields()
 
-    def updateProgressBar(self):
-        pass
-
     def fileToRam(self, inputFile):
         cmd = ["ffmpeg", "-y", "-i", inputFile, "-f", "wav", "-"]
 
-            #rawWav = tempfile      .SpooledTemporaryFile(mode='wb', max_size=600*1024*1024)
         rawWav = bytearray()
 
         print("CMD: " + " ".join(cmd))
@@ -677,10 +660,6 @@ class Controller:
             rawWav += data
 
         return rawWav
-
-    def processLine(self, line):
-        print("Line: " + line)
-
 
     def encodeLame(self, inputFile, outputFile, args, tags, fileInput, updateValue):
         splitArgs = shlex.split(args)
@@ -721,9 +700,6 @@ class Controller:
         self.doEncode(cmd, fileInput, updateValue)
         print("Opus done")
 
-    def parseLame(self, text):
-        pass
-
     def saveOptions(self):
         self.model.setEncodingProgram("lq", self.view.lqOptionsProgram.get())
         self.model.setEncodingProgram("hq", self.view.hqOptionsProgram.get())
@@ -750,4 +726,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
