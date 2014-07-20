@@ -3,6 +3,8 @@
 from datetime import date, datetime
 import json
 import os
+from os.path import dirname, realpath
+import platform
 import shlex
 import sqlite3
 import subprocess
@@ -10,6 +12,8 @@ import threading
 from time import sleep
 from tkinter import *
 from tkinter import ttk, filedialog, messagebox
+
+PROGRAMNAME = "sermonsEncoder"
 
 
 class STATUS:
@@ -439,13 +443,31 @@ class EncoderUi(Frame):
 
 class Data:
     def __init__(self):
+        self.setupPaths()
         self.setupDatabase()
         self.setupOptionsText()
 
         self.encodingResult = {"hq": -1, "lq": -1, "opus": -1}
 
+    def setupPaths(self):
+        system = platform.system()
+        binPath = dirname(realpath(__file__))
+        self.settingsPath = os.path.join(binPath, "..")
+        if system == "Linux":
+            self.settingsPath = os.path.join(os.path.expanduser("~"), ".config", PROGRAMNAME)
+        elif system == "Darwin":
+            self.settingsPath = os.path.join(os.path.expanduser("~"), "Library", "Application Support", PROGRAMNAME)
+        elif system == "Windows":
+            self.settingsPath = os.path.join(os.environ["APPDATA"], PROGRAMNAME)
+
+        print("Using settings path: ", self.settingsPath, file=sys.stderr)
+        if not os.path.exists(self.settingsPath):
+            os.makedirs(self.settingsPath)
+
+
     def setupDatabase(self):
-        self.conn = sqlite3.connect("history.db", detect_types=sqlite3.PARSE_DECLTYPES)
+        dbPath = os.path.join(self.settingsPath, "history.db")
+        self.conn = sqlite3.connect(dbPath, detect_types=sqlite3.PARSE_DECLTYPES)
 
         cur = self.conn.cursor()
         cur.execute('''CREATE TABLE IF NOT EXISTS series(
@@ -459,8 +481,9 @@ class Data:
 
     def setupOptionsText(self):
         self.optionsFilename = "encodeOpts.conf"
+        self.optionsPath = os.path.join(self.settingsPath, self.optionsFilename)
         try:
-            with open(self.optionsFilename) as f:
+            with open(self.optionsPath) as f:
                 optsString = " ".join(f.readlines())
 
         except FileNotFoundError:
@@ -473,7 +496,7 @@ class Data:
         self.saveOptions()
 
     def saveOptions(self):
-        with open(self.optionsFilename, mode="w") as f:
+        with open(self.optionsPath, mode="w") as f:
             json.dump(self.encodingOptions, f, indent=4, sort_keys=True)
 
     def getEncodingOptions(self, quality):
