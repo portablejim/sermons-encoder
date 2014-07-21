@@ -409,9 +409,10 @@ class EncoderUi(Frame):
 
     # noinspection PyUnusedLocal
     def selectedSeries(self, unused):
-        selectedId = int(self.seriesList.curselection()[0])
-        selectedName = self.sermonSeriesRecentVar[selectedId]
-        self.actionSermonSelected(selectedName)
+        if len(self.seriesList.curselection()) > 0:
+            selectedId = int(self.seriesList.curselection()[0])
+            selectedName = self.sermonSeriesRecentVar[selectedId]
+            self.actionSermonSelected(selectedName)
 
     def setSeries(self, speaker, name, service, directory):
         self.sermonSpeaker.set(speaker)
@@ -610,35 +611,47 @@ class Controller:
 
         commandLookup = {"lame": self.encodeLame, "opusenc": self.encodeOpus}
 
-        thread1 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
-                                   args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % filename),
-                                         self.model.getEncodingOptions("lq")["options"],
-                                         metadata,
-                                         rawWav,
-                                         "lq"))
-        thread2 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
-                                   args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % filename),
-                                         self.model.getEncodingOptions("hq")["options"],
-                                         metadata,
-                                         rawWav,
-                                         "hq"))
-        thread3 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("opus")["program"]],
-                                   args=("-",
-                                         os.path.join(self.view.sermonDirectory.get(), "%s.opus" % filename),
-                                         self.model.getEncodingOptions("opus")["options"],
-                                         metadata,
-                                         rawWav,
-                                         "opus"))
+        thread1 = threading.Thread()
+        thread2 = threading.Thread()
+        thread3 = threading.Thread()
+        if self.view.encode1:
+            thread1 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
+                                       args=("-",
+                                             os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % filename),
+                                             self.model.getEncodingOptions("lq")["options"],
+                                             metadata,
+                                             rawWav,
+                                             "lq"))
+        if self.view.encode2:
+            thread2 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
+                                       args=("-",
+                                             os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % filename),
+                                             self.model.getEncodingOptions("hq")["options"],
+                                             metadata,
+                                             rawWav,
+                                             "hq"))
+        if self.view.encode3:
+            thread3 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("opus")["program"]],
+                                       args=("-",
+                                             os.path.join(self.view.sermonDirectory.get(), "%s.opus" % filename),
+                                             self.model.getEncodingOptions("opus")["options"],
+                                             metadata,
+                                             rawWav,
+                                             "opus"))
 
-        thread1.start()
-        thread2.start()
-        thread3.start()
+        if self.view.encode1:
+            thread1.start()
+        if self.view.encode2:
+            thread2.start()
+        if self.view.encode3:
+            thread3.start()
 
-        thread1.join()
-        thread2.join()
-        thread3.join()
+        if self.view.encode1:
+            thread1.join()
+        if self.view.encode2:
+            thread2.join()
+        if self.view.encode3:
+            thread3.join()
 
         resultLq = self.model.encodingResult["lq"]
         resultHq = self.model.encodingResult["hq"]
