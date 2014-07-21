@@ -599,7 +599,7 @@ class Controller:
         self.view.status = STATUS.ENCODING_2
         self.view.statusUpdate = True
 
-        targetDate = "%s%s%s" % (
+        targetDate = "%04d%02d%02d" % (
             self.view.sermonDateYear.get(), self.view.sermonDateMonth.get(), self.view.sermonDateDay.get())
         suffix = ""
         if self.view.sermonService.get().strip() != "":
