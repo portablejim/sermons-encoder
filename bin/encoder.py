@@ -29,7 +29,7 @@ class sermonsLabel(ttk.Label):
         self.grid(column=0, row=row, sticky=W, padx=4)
 
 
-class EncoderUi(Frame):
+class EncoderUi(ttk.Frame):
     def __init__(self, model):
         self.root = Tk()
         self.root.columnconfigure(0, weight=1)
@@ -43,7 +43,7 @@ class EncoderUi(Frame):
 
         self.root.title("Sermon Encoder")
 
-        self.parent = Frame(self.root)
+        self.parent = ttk.Frame(self.root)
         self.parent.grid(column=0, row=0, sticky=(N, S, E, W))
         self.parent.columnconfigure(0, weight=1)
         self.parent.rowconfigure(0, weight=1)
@@ -53,7 +53,7 @@ class EncoderUi(Frame):
 
         self.actionSermonSelected = None
 
-        Frame.__init__(self, self.parent, padx=6, pady=14)
+        ttk.Frame.__init__(self, self.parent, padding=(6,6,14,14))
 
         self.speaker = list()
 
@@ -91,11 +91,11 @@ class EncoderUi(Frame):
         self.targetFilename = StringVar()
 
         self.fileChooserText = ttk.Label(self, text="Input audio file")
-        self.fileChooserFrame = Frame(self)
+        self.fileChooserFrame = ttk.Frame(self)
         self.fileChooserEntry = ttk.Entry(self.fileChooserFrame, width=40, textvariable=self.targetFilename)
         self.fileChooserButton = ttk.Button(self.fileChooserFrame, text="...", width=3, command=self.chooseFile)
 
-        self.fileChooserFrame.configure(padx=2)
+        self.fileChooserFrame.configure(padding=(2,2,0,0))
 
         self.fileChooserText.grid(column=0, row=0, sticky=W)
         self.fileChooserFrame.grid(column=1, row=0, sticky=(E, W))
@@ -117,7 +117,7 @@ class EncoderUi(Frame):
         self.sermonDateDay = IntVar()
         self.sermonDirectory = StringVar()
 
-        series_list_container = Frame(self)
+        series_list_container = ttk.Frame(self)
         series_list_container.columnconfigure(0, weight=1)
         series_list_container.rowconfigure(0, weight=1)
         series_list_scrollbar = Scrollbar(series_list_container)
@@ -129,21 +129,21 @@ class EncoderUi(Frame):
 
         series_list.bind("<<ListboxSelect>>", self.selectedSeries)
 
-        dateFrameContainer = Frame(self)
+        dateFrameContainer = ttk.Frame(self)
         dateFrameContainer.columnconfigure(0, minsize=40, weight=2)
         dateFrameContainer.columnconfigure(1, weight=1)
         dateFrameContainer.columnconfigure(2, minsize=50, weight=2)
         dateFrameContainer.columnconfigure(3, weight=1)
         dateFrameContainer.columnconfigure(4, minsize=35, weight=2)
         dateFrameContainer.columnconfigure(5, weight=1)
-        dateYearLabel = Label(dateFrameContainer, text="Year:")
+        dateYearLabel = ttk.Label(dateFrameContainer, text="Year:")
         dateYearSpinbox = Spinbox(dateFrameContainer, from_=date.today().year - 50, to=date.today().year + 50,
                                   textvariable=self.sermonDateYear)
         self.sermonDateYear.set(date.today().year)
-        dateMonthLabel = Label(dateFrameContainer, text="Month:")
+        dateMonthLabel = ttk.Label(dateFrameContainer, text="Month:")
         dateMonthSpinbox = Spinbox(dateFrameContainer, from_=1, to=12, textvariable=self.sermonDateMonth)
         self.sermonDateMonth.set(date.today().month)
-        dateDayLabel = Label(dateFrameContainer, text="Day:")
+        dateDayLabel = ttk.Label(dateFrameContainer, text="Day:")
         dateDaySpinbox = Spinbox(dateFrameContainer, from_=1, to=31, textvariable=self.sermonDateDay)
         self.sermonDateDay.set(date.today().day)
         dateYearLabel.grid(column=0, row=0, padx=2, sticky=(E, W))
@@ -159,7 +159,7 @@ class EncoderUi(Frame):
         series_entry = ttk.Entry(self, width=40, textvariable=self.sermonSeries)
         service_combo = ttk.Combobox(self, width=40, textvariable=self.sermonService)
 
-        directoryFrameContainer = Frame(self)
+        directoryFrameContainer = ttk.Frame(self)
         directoryFrameContainer.columnconfigure(0, weight=1)
         directoryFrameContainer.rowconfigure(0, weight=1)
         directoryEntry = ttk.Entry(directoryFrameContainer, width=40, textvariable=self.sermonDirectory)
@@ -211,7 +211,7 @@ class EncoderUi(Frame):
         self.encode3 = BooleanVar()
         self.outputSuffix = StringVar()
 
-        encodingOptionsContainer = Frame(self)
+        encodingOptionsContainer = ttk.Frame(self)
         encodingOptionsContainer.columnconfigure(0, weight=1, minsize=120)
         encodingOptionsContainer.columnconfigure(1, weight=1, minsize=140)
         encodingOptionsContainer.columnconfigure(2, weight=1, minsize=80)
@@ -270,7 +270,7 @@ class EncoderUi(Frame):
         window.columnconfigure(0, weight=1)
         window.transient(self.root)
         window.title("Sermon Encoder Options")
-        frame = Frame(window)
+        frame = ttk.Frame(window)
         frame.columnconfigure(2, weight=1)
 
         sermonsLabel(frame, "Low quality MP3 options", 0)
@@ -308,7 +308,7 @@ class EncoderUi(Frame):
         self.hqOptionsOptions.set(self.model.getEncodingOptions("hq")["options"])
         self.opusOptionsOptions.set(self.model.getEncodingOptions("opus")["options"])
 
-        frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N, E, S, W))
+        frame.grid(column=0, row=0, padding=(8,8,8,8), sticky=(N, E, S, W))
         self.comboboxLqOptionsProgram.grid(column=1, row=0)
         self.comboboxHqOptionsProgram.grid(column=1, row=1)
         self.comboboxOpusOptionsProgram.grid(column=1, row=2)
