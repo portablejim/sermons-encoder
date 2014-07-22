@@ -17,7 +17,7 @@ The quality of the files is controllable in the program options.
 ## Dependencies
 
  * Python 3 with modules: tkinter, sqlite3
- * `ffmpeg`
+ * `ffmpeg` or `libav`
  * `lame`
  * `opusenc`
 

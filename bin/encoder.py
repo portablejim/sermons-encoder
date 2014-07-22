@@ -6,6 +6,7 @@ import os
 from os.path import dirname, realpath
 import platform
 import shlex
+import shutil
 import sqlite3
 import subprocess
 import threading
@@ -689,7 +690,14 @@ class Controller:
         self.view.enableFields()
 
     def fileToRam(self, inputFile):
-        cmd = ["ffmpeg", "-y", "-i", inputFile, "-f", "wav", "-"]
+        program = "ffmpeg"
+        hasFfmpeg = shutil.which('ffmpeg') is not None
+        if not hasFfmpeg:
+            hasLibav = shutil.which('avconv') is not None
+            if hasLibav:
+                program = "avconv"
+
+        cmd = [program, "-y", "-i", inputFile, "-f", "wav", "-"]
 
         rawWav = bytearray()
 
