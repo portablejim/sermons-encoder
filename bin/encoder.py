@@ -36,6 +36,11 @@ class EncoderUi(Frame):
         self.root.rowconfigure(0, weight=1)
         self.root.minsize(500, 490)
 
+        binPath = dirname(realpath(__file__))
+        iconPath = os.path.join(binPath, "../icon/icon.gif")
+        img = PhotoImage(file=iconPath)
+        self.root.tk.call('wm', 'iconphoto', self.root._w, img)
+
         self.root.title("Sermon Encoder")
 
         self.parent = Frame(self.root)
