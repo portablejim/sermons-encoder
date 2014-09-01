@@ -309,7 +309,7 @@ class EncoderUi(ttk.Frame):
         self.hqOptionsOptions.set(self.model.getEncodingOptions("hq")["options"])
         self.opusOptionsOptions.set(self.model.getEncodingOptions("opus")["options"])
 
-        frame.grid(column=0, row=0, padding=(8,8,8,8), sticky=(N, E, S, W))
+        frame.grid(column=0, row=0, padx=8, pady=8, sticky=(N, E, S, W))
         self.comboboxLqOptionsProgram.grid(column=1, row=0)
         self.comboboxHqOptionsProgram.grid(column=1, row=1)
         self.comboboxOpusOptionsProgram.grid(column=1, row=2)
@@ -620,7 +620,7 @@ class Controller:
         thread1 = threading.Thread()
         thread2 = threading.Thread()
         thread3 = threading.Thread()
-        if self.view.encode1:
+        if self.view.encode1.get():
             thread1 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                        args=("-",
                                              os.path.join(self.view.sermonDirectory.get(), "dial", "%s.mp3" % filename),
@@ -628,7 +628,7 @@ class Controller:
                                              metadata,
                                              rawWav,
                                              "lq"))
-        if self.view.encode2:
+        if self.view.encode2.get():
             thread2 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("lq")["program"]],
                                        args=("-",
                                              os.path.join(self.view.sermonDirectory.get(), "%s.mp3" % filename),
@@ -636,7 +636,7 @@ class Controller:
                                              metadata,
                                              rawWav,
                                              "hq"))
-        if self.view.encode3:
+        if self.view.encode3.get():
             thread3 = threading.Thread(target=commandLookup[self.model.getEncodingOptions("opus")["program"]],
                                        args=("-",
                                              os.path.join(self.view.sermonDirectory.get(), "%s.opus" % filename),
@@ -645,18 +645,18 @@ class Controller:
                                              rawWav,
                                              "opus"))
 
-        if self.view.encode1:
+        if self.view.encode1.get():
             thread1.start()
-        if self.view.encode2:
+        if self.view.encode2.get():
             thread2.start()
-        if self.view.encode3:
+        if self.view.encode3.get():
             thread3.start()
 
-        if self.view.encode1:
+        if self.view.encode1.get():
             thread1.join()
-        if self.view.encode2:
+        if self.view.encode2.get():
             thread2.join()
-        if self.view.encode3:
+        if self.view.encode3.get():
             thread3.join()
 
         resultLq = self.model.encodingResult["lq"]
