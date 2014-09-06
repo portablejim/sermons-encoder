@@ -5,17 +5,22 @@ Usage:
     python setup.py py2app
 """
 
+import os
 from setuptools import setup
+
+VERSION = ""
 
 filename = "version.py"
 exec(open(filename).read())
 
 print(VERSION)
 
+currentDirectory = os.path.dirname(os.path.realpath(__file__))
+
 APP = ['bin/encoder.py']
 DATA_FILES = ['icon/icon.icns']
 OPTIONS = {'argv_emulation': True,
- 'iconfile': '/Users/james/Documents/sermons-encoder/code/icon/icon.icns',
+ 'iconfile': os.path.join(currentDirectory, '../icon/icon.icns'),
  'plist': {'CFBundleDevelopmentRegion': 'English',
            'CFBundleDisplayName': 'Sermons Encoder',
            'CFBundleDocumentTypes': [{'CFBundleTypeOSTypes': ['****',
