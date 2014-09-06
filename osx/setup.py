@@ -7,8 +7,13 @@ Usage:
 
 from setuptools import setup
 
+filename = "version.py"
+exec(open(filename).read())
+
+print(VERSION)
+
 APP = ['bin/encoder.py']
-DATA_FILES = ['--iconfile', '--plist']
+DATA_FILES = ['icon/icon.icns']
 OPTIONS = {'argv_emulation': True,
  'iconfile': '/Users/james/Documents/sermons-encoder/code/icon/icon.icns',
  'plist': {'CFBundleDevelopmentRegion': 'English',
@@ -23,9 +28,9 @@ OPTIONS = {'argv_emulation': True,
            'CFBundleInfoDictionaryVersion': '6.0',
            'CFBundleName': 'Sermons Encoder',
            'CFBundlePackageType': 'APPL',
-           'CFBundleShortVersionString': '0.0.0',
+           'CFBundleShortVersionString': VERSION,
            'CFBundleSignature': '????',
-           'CFBundleVersion': '0.0.0',
+           'CFBundleVersion': VERSION,
            'LSHasLocalizedDisplayName': False,
            'NSAppleScriptEnabled': False,
            'NSHumanReadableCopyright': 'Copyright not specified',

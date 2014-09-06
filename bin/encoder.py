@@ -39,8 +39,9 @@ class EncoderUi(ttk.Frame):
 
         binPath = dirname(realpath(__file__))
         iconPath = os.path.join(binPath, "../icon/icon.gif")
-        img = PhotoImage(file=iconPath)
-        self.root.tk.call('wm', 'iconphoto', self.root._w, img)
+        if os.path.exists(iconPath):
+            img = PhotoImage(file=iconPath)
+            self.root.tk.call('wm', 'iconphoto', self.root._w, img)
 
         self.root.title("Sermon Encoder")
 
