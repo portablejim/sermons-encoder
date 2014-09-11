@@ -454,6 +454,7 @@ class Data:
         self.setupPaths()
         self.setupDatabase()
         self.setupOptionsText()
+        self.setupProgramPaths()
 
         self.encodingResult = {"hq": -1, "lq": -1, "opus": -1}
 
@@ -503,6 +504,34 @@ class Data:
         self.encodingOptions = json.loads(optsString)
         self.saveOptions()
 
+    def setupProgramPaths(self):
+        self.pathsPath = os.path.join(self.settingsPath, "paths.json")
+        pathsString = '{\n' \
+                     '"autodetectPaths": true,\n' \
+                     '"programPaths": {\n' \
+                     '    "ffmpeg": "ffmpeg",\n' \
+                     '    "lame": "lame",\n' \
+                     '    "opusenc": "opusenc",\n' \
+                     '    "oggenc": "oggenc"\n' \
+                     '}\n' \
+                     '}'
+        if not os.path.exists(self.pathsPath):
+            try:
+                with open(self.pathsPath, 'w') as f:
+                    f.writelines(pathsString)
+            except:
+                pass
+
+
+        try:
+            with open(self.pathsPath) as f:
+                pathsString = " ".join(f.readlines())
+        except FileNotFoundError:
+            pass
+
+        self.programPaths = json.loads(pathsString)
+
+
     def saveOptions(self):
         with open(self.optionsPath, mode="w") as f:
             json.dump(self.encodingOptions, f, indent=4, sort_keys=True)
@@ -544,6 +573,28 @@ class Data:
         cur = self.conn.cursor()
         cur.execute("SELECT * FROM series WHERE seriesName=?", (seriesName,))
         return cur.fetchone()
+
+    def getProgram(self, name):
+        if self.programPaths["autodetectPaths"]:
+            if name == "ffmpeg":
+                hasFfmpeg = shutil.which('ffmpeg') is not None
+                if hasFfmpeg:
+                    return "ffmpeg"
+                else:
+                    hasLibav = shutil.which('avconv') is not None
+                    if hasLibav:
+                        return "avconv"
+
+            if shutil.which(name) is not None:
+                return name
+
+        # If autodetect fails or is turned off, attempt to get program path.
+        if name in self.programPaths["programPaths"]:
+            return self.programPaths["programPaths"][name]
+
+        # Else just return what we are sent
+        return name
+
 
 
 class Controller:
@@ -691,12 +742,7 @@ class Controller:
         self.view.enableFields()
 
     def fileToRam(self, inputFile):
-        program = "ffmpeg"
-        hasFfmpeg = shutil.which('ffmpeg') is not None
-        if not hasFfmpeg:
-            hasLibav = shutil.which('avconv') is not None
-            if hasLibav:
-                program = "avconv"
+        program = self.model.getProgram("ffmpeg")
 
         cmd = [program, "-y", "-i", inputFile, "-f", "wav", "-"]
 
@@ -717,7 +763,7 @@ class Controller:
     def encodeLame(self, inputFile, outputFile, args, tags, fileInput, updateValue):
         splitArgs = shlex.split(args)
         cmd = [
-            "lame",
+            self.model.getProgram("lame"),
             inputFile,
             outputFile,
             "--tt",
@@ -737,7 +783,7 @@ class Controller:
     def encodeOpus(self, inputFile, outputFile, args, tags, fileInput, updateValue):
         splitArgs = shlex.split(args)
         cmd = [
-            "opusenc",
+            self.model.getProgram("opusenc"),
             "--quiet",
             inputFile,
             outputFile,
