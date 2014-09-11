@@ -328,9 +328,13 @@ class EncoderUi(ttk.Frame):
         self.seriesList.configure(listvariable=self.sermonSeriesRecent)
 
     def chooseFile(self):
+        lastdir = self.model.getLatestInputDirectory()
+        if lastdir == "" or not os.path.isdir(lastdir):
+            lastdir = os.path.expanduser("~")
+
         filename = filedialog.askopenfilename(
             filetypes=(("Lossless audio", "*.flac *.wav *.aiff;"), ("Lossy audio", "*.opus *.ogg *.mp3")),
-            initialdir=os.path.expanduser("~"),
+            initialdir=lastdir,
             parent=self)
         self.targetFilename.set(filename)
 
@@ -513,7 +517,8 @@ class Data:
                      '    "lame": "lame",\n' \
                      '    "opusenc": "opusenc",\n' \
                      '    "oggenc": "oggenc"\n' \
-                     '}\n' \
+                     '},\n' \
+                     ' "lastPath": ""' \
                      '}'
         if not os.path.exists(self.pathsPath):
             try:
@@ -530,11 +535,16 @@ class Data:
             pass
 
         self.programPaths = json.loads(pathsString)
+        self.saveProgramPaths()
 
 
     def saveOptions(self):
         with open(self.optionsPath, mode="w") as f:
             json.dump(self.encodingOptions, f, indent=4, sort_keys=True)
+
+    def saveProgramPaths(self):
+        with open(self.pathsPath, mode="w") as f:
+            json.dump(self.programPaths, f, indent=4, sort_keys=True)
 
     def getEncodingOptions(self, quality):
         return self.encodingOptions[quality]
@@ -546,6 +556,13 @@ class Data:
     def setEncodingOptions(self, quality, options):
         self.encodingOptions[quality]["options"] = options
         self.saveOptions()
+
+    def getLatestInputDirectory(self):
+        return self.programPaths["latestPath"]
+
+    def setLatestInputDirectory(self, directory):
+        self.programPaths["latestPath"] = directory
+        self.saveProgramPaths()
 
     def getRecentSeries(self):
         cur = self.conn.cursor()
@@ -641,6 +658,10 @@ class Controller:
 
         self.model.insertSeries(self.view.sermonSeries.get(), self.view.sermonSpeaker.get(),
                                 self.view.sermonService.get(), self.view.sermonDirectory.get())
+
+        inputDirectory = os.path.dirname(inputFile)
+        self.model.setLatestInputDirectory(inputDirectory)
+
         if os.path.exists(self.view.targetFilename.get()):
             threading.Thread(target=self.encodeAllFiles).start()
 
