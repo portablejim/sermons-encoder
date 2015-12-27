@@ -566,14 +566,14 @@ class Data:
 
     def getRecentSeries(self):
         cur = self.conn.cursor()
-        cur.execute("SELECT seriesName FROM series ORDER BY used LIMIT 10")
+        cur.execute("SELECT seriesName FROM series ORDER BY used DESC LIMIT 10")
         rows = cur.fetchall()
         return tuple([row[0] for row in rows])
 
     def getLatestDirectory(self):
         try:
             cur = self.conn.cursor()
-            cur.execute("SELECT directory FROM series ORDER BY used LIMIT 1")
+            cur.execute("SELECT directory FROM series ORDER BY used DESC LIMIT 1")
             rows = cur.fetchall()
             return rows[0][0]
         except:
